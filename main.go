@@ -18,7 +18,6 @@ const (
 var (
 	globalMasterData common.MasterData
 	rtlsRedis        *common.RtlsRedis
-	mdLock           = sync.RWMutex{}
 )
 
 func main() {
@@ -53,11 +52,9 @@ func prepareForRun() {
 
 func loadMasterDataFromRedis(rtlsRedis *common.RtlsRedis) {
 	start := time.Now()
-	mdLock.Lock()
 	globalMasterData.Anchors = rtlsRedis.GetAllAnchorsFromRedis()
 	globalMasterData.Tags = rtlsRedis.GetAllTagsFromRedis()
 	globalMasterData.Entities = rtlsRedis.GetAllEntitiesFromRedis()
-	mdLock.Unlock()
 	fmt.Println("Master data loaded from redis :", time.Since(start).Milliseconds())
 }
 
@@ -80,8 +77,6 @@ func runMasterDataConsumer(wg *sync.WaitGroup) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			mdLock.RLock()
-
 			switch mdUpdate.Operation {
 			case 1: //add-update
 				switch mdUpdate.DataType {
@@ -102,8 +97,6 @@ func runMasterDataConsumer(wg *sync.WaitGroup) {
 					delete(globalMasterData.Entities, mdUpdate.Key)
 				}
 			}
-
-			mdLock.Unlock()
 		}
 	}
 }
